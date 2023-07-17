@@ -3,7 +3,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import authentication, permissions
+from rest_framework import authentication, permissions, status
 from django.contrib.auth.models import User
 from todolist.models import TodoItem
 from todolist.serializers import TodoItemSerializer
@@ -18,6 +18,35 @@ class TodoItemView(APIView):
         todos = TodoItem.objects.filter(author=request.user)
         serializer = TodoItemSerializer(todos, many=True)
         return Response(serializer.data)
+    
+    def post(self ,request, format=None):
+        serializer = TodoItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+    
+class TodoItemDetailView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk, format=None):
+        todos = TodoItem.objects.filter(pk=pk)
+        serializer = TodoItemSerializer(todos, many=True)
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        todo = TodoItem.objects.filter(pk=pk)
+        todo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    def patch(self, request, pk, format=None):
+        todo = TodoItem.objects.get(pk=pk)
+        serializer = TodoItemSerializer(todo, data=request.data, partial=True) # set partial=True to update a data partially
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
 
 class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
